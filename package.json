@@ -1,0 +1,38 @@
+{
+  "name": "ls-portfolio-backend",
+  "version": "1.0.0",
+  "description": "Backend for the LS Porfolio project... capstone.",
+  "main": "server.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "nodemon server"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/LSPortfolio/backend.git"
+  },
+  "author": "CS2",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/LSPortfolio/backend/issues"
+  },
+  "homepage": "https://github.com/LSPortfolio/backend#readme",
+  "dependencies": {
+    "@sendgrid/mail": "^6.1.4",
+    "async": "^2.6.0",
+    "bcrypt-nodejs": "0.0.3",
+    "body-parser": "^1.18.2",
+    "cors": "^2.8.4",
+    "crypto": "^1.0.1",
+    "dotenv": "^4.0.0",
+    "express": "^4.16.2",
+    "jsonwebtoken": "^8.1.0",
+    "lodash": "^4.17.4",
+    "mailchimp-api-3": "0.0.9",
+    "moment": "^2.20.1",
+    "mongoose": "^4.13.9",
+    "morgan": "^1.9.0",
+    "path": "^0.12.7",
+    "winston": "^2.4.0"
+  }
+}
