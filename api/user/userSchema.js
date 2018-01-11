@@ -16,16 +16,19 @@ const userSchema = Schema({
         type: String,
         required: true,
     },
+    email: {
+        type: String
+    },
+    fullname: String,
     profile: {
         preferred_location: String,
         picture: String,
         subtitle: String,
-        fullname: String,
         location: String,
         bio: String
     },
-    email: {
-        type: String
+    role: {
+        type: String,
     },
     social: [{
         site: {

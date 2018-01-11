@@ -19,6 +19,7 @@
   "homepage": "https://github.com/LSPortfolio/backend#readme",
   "dependencies": {
     "@sendgrid/mail": "^6.1.4",
+    "airtable": "^0.5.1",
     "async": "^2.6.0",
     "bcrypt": "^1.0.3",
     "bcrypt-nodejs": "0.0.3",

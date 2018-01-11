@@ -3,6 +3,7 @@ const User = require('./userSchema');
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const container = require('../../config/config');
+const Airtable = require('airtable');
 
 const hash = 11;
 
@@ -16,7 +17,18 @@ const mail = (res, email, title, body) => {
     html: '<strong>and easy to do anywhere, even with Node.js</strong>'
   }
   sendGrid.send(msg, (err, data) => {
-    if (err) res.status(500).json({ message: 'Something went wrong when delivering message' });
+    if (err || !data) return res.status(500).json({ message: 'Something went wrong when delivering message' });
+  });
+  return;
+}
+
+const airTable = (res , name, role) => { 
+  const base = new Airtable({ apiKey: container.airtableApi}).base('appBoMPOblMCdnl9F');
+  base('People').create({
+    "Name": name,
+    "Role": role
+  }, (err, data) => {
+    if (err || !data) return res.status(422).send({ message: 'Error sending applicant type' });
   });
   return;
 }
@@ -24,14 +36,15 @@ const mail = (res, email, title, body) => {
 module.exports = {
 
   createUser: (req, res) => {
-    let { username, email, password, sAnswer, ladder } = req.body;
+    let { username, password, sAnswer, email, fullname, role } = req.body;
     if (!username || !password) return res.status(400).send({ message: 'Nothing in input field'});
     bcrypt.hash(password, hash, (err, hash) => {
       password = hash;
-      const newUser = new User({ username, password, email, sAnswer, ladder });
+      const newUser = new User({ username, password, sAnswer, email, fullname, role });
       newUser.save((err, data) => {
         if (err || !data) return res.status(400).send({ message: 'Username is taken' });
         mail(res, email, 'Welcome to showcase', 'confirm user');
+        airTable(res, fullname, role);
         res.json({ message: 'Success' });
       });
     });
