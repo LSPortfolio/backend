@@ -40,15 +40,16 @@ module.exports = {
   userLogin: (req, res) => {
     const { username, password } = req.body;
     User.findOne({ username: username })
-      .then(user => {
+      .then((user) => {
+        if (!user) return res.status(400).json({ error : 'incorrect username' });
         bcrypt.compare(password, user.password, (err, valid) => {
           if (err || valid === false) return res.status(400).json({ error : 'incorrect password' });
+          const token = jwt.sign({ user }, container.secret);
+          res.json({ success: 'yes', jtwToken: token });
         });
-        const token = jwt.sign({ user }, container.secret);
-        res.json({ success: 'yes', jtwToken: token });
       })
-      .catch(err => {
-        if (err) return res.status(STATUS_USER_ERROR).json(err.message);
+      .catch((err) => {
+        if (err) return res.status(400).json(err.message);
       });
   },
 
@@ -56,8 +57,9 @@ module.exports = {
     const { email, sAnswer } = req.body;
     User.findOne({ email: email })
       .then((data) => {
-        if (sAnswer !== data.sAnswer) res.status(400).send({ message: 'answer does not equal' });
+        if (!email || sAnswer !== data.sAnswer) res.status(400).send({ message: 'incorrect input' });
         mail(res, data.email, 'Reset Password Lambda Showcase', 'Reset password?');
+        res.json({ message: 'success' });
       })
       .catch((err) => {
         if (err) res.status(400).json({ message: 'You have input the incorrect Email' });
