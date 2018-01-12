@@ -44,18 +44,21 @@ module.exports = {
     const { email, answer } = req.body;
     User.findOne({ email: email })
       .then((data) => {
-        if (!email || answer !== data.answer) res.status(400).send({ message: 'incorrect input' });
-        functions.mail(res, data.email, 'Reset Password Lambda Showcase', 'Reset password?');         //will update soon
-        res.json({ message: 'success' });
+        if (!data || answer !== data.answer) res.status(400).send({ message: 'incorrect input' });
+        const token = jwt.sign({ data: data.username }, container.secret);
+        functions.mail(res, data.email, 'Reset Password Lambda Showcase', 'Reset password?');         //will update soon, put token in 4th parameter
+        res.json({ message: 'success', temporaryToken: token });
       })
       .catch((err) => {
         if (err) res.status(400).json({ message: 'You have input the incorrect Email' });
       })
   },
 
-  resetPassword: (req, res) => {                                            //Reset Password after receiving the forgotten password email
-    const { username, answer, password } = req.body;
-    User.findOne({ username: username }, (err, data) => {
+  resetPassword: (req, res) => {                                              //Reset Password after receiving the forgotten password email
+    const { token } = req.params;                          
+    const { answer, password } = req.body;
+    const decoded = jwt.verify(token, container.secret);
+    User.findOne({ username: decoded.data }, (err, data) => {
       if (data.answer !== answer) return res.status(400).send({ message: 'invalid question'});
       if (err || !data) res.status(400).send('Invalid username, so you are unable to change password');
       bcrypt.hash(password, hash, (err, hashedPassword) => {
