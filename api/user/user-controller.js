@@ -1,63 +1,37 @@
-const sendGrid = require('@sendgrid/mail');
 const User = require('./userSchema');
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const container = require('../../config/config');
-const Airtable = require('airtable');
+const functions = require('./functions');
 
 const hash = 11;
 
-const mail = (res, email, title, body) => {
-  sendGrid.setApiKey(container.sendgridApi);
-  let msg = {
-    to: email,
-    from: 'rolandc5@hotmail.com',
-    subject: title,
-    text: body,
-    html: '<strong>and easy to do anywhere, even with Node.js</strong>'
-  }
-  sendGrid.send(msg, (err, data) => {
-    if (err || !data) return res.status(500).json({ message: 'Something went wrong when delivering message' });
-  });
-  return;
-}
-
-const airTable = (res , name, role) => { 
-  const base = new Airtable({ apiKey: container.airtableApi}).base('appBoMPOblMCdnl9F');
-  base('People').create({
-    "Name": name,
-    "Role": role
-  }, (err, data) => {
-    if (err || !data) return res.status(422).send({ message: 'Error sending applicant type' });
-  });
-  return;
-}
-
 module.exports = {
 
-  createUser: (req, res) => {
-    let { username, password, sAnswer, email, fullname, role } = req.body;
+  createUser: (req, res) => {                                                   //Create user
+    let { username, password, answer, email, firstname, lastname, role } = req.body;
+    fullname = `${firstname} ${lastname}`;
     if (!username || !password) return res.status(400).send({ message: 'Nothing in input field'});
     bcrypt.hash(password, hash, (err, hash) => {
       password = hash;
-      const newUser = new User({ username, password, sAnswer, email, fullname, role });
+      const newUser = new User({ username, password, answer, email, fullname, role });
       newUser.save((err, data) => {
-        if (err || !data) return res.status(400).send({ message: 'Username is taken' });
-        mail(res, email, 'Welcome to showcase', 'confirm user');
-        airTable(res, fullname, role);
+        if (err || !data) return res.status(400).send({ message: 'Username is taken' });    
+        functions.mail(res, email, 'Welcome to showcase', 'confirm user');    //Automatically sends user email that they've signed in        
+        functions.airTable(res, fullname, role);  //Sends user info to airtable if they are staff or not
         res.json({ message: 'Success' });
       });
     });
   },
 
-  userLogin: (req, res) => {
+  userLogin: (req, res) => {                                                  //Standard user login
     const { username, password } = req.body;
     User.findOne({ username: username })
       .then((user) => {
         if (!user) return res.status(400).json({ error : 'incorrect username' });
         bcrypt.compare(password, user.password, (err, valid) => {
           if (err || valid === false) return res.status(400).json({ error : 'incorrect password' });
-          const token = jwt.sign({ user }, container.secret);
+          const token = jwt.sign({ user }, container.secret);               //Will update soon
           res.json({ success: 'yes', jtwToken: token });
         });
       })
@@ -66,12 +40,12 @@ module.exports = {
       });
   },
 
-  forgotPassword: (req, res) => {
-    const { email, sAnswer } = req.body;
+  forgotPassword: (req, res) => {                                             //Forgot password Part
+    const { email, answer } = req.body;
     User.findOne({ email: email })
       .then((data) => {
-        if (!email || sAnswer !== data.sAnswer) res.status(400).send({ message: 'incorrect input' });
-        mail(res, data.email, 'Reset Password Lambda Showcase', 'Reset password?');
+        if (!email || answer !== data.answer) res.status(400).send({ message: 'incorrect input' });
+        functions.mail(res, data.email, 'Reset Password Lambda Showcase', 'Reset password?');         //will update soon
         res.json({ message: 'success' });
       })
       .catch((err) => {
@@ -79,16 +53,16 @@ module.exports = {
       })
   },
 
-  resetPassword: (req, res) => {
-    const { username, sAnswer, password } = req.body;
+  resetPassword: (req, res) => {                                            //Reset Password after receiving the forgotten password email
+    const { username, answer, password } = req.body;
     User.findOne({ username: username }, (err, data) => {
-      if (data.sAnswer !== sAnswer) return res.status(400).send({ message: 'invalid quesiton'});
+      if (data.answer !== answer) return res.status(400).send({ message: 'invalid question'});
       if (err || !data) res.status(400).send('Invalid username, so you are unable to change password');
       bcrypt.hash(password, hash, (err, hashedPassword) => {
         data.password = hashedPassword;
       data.save();
-      mail(res, data.email, 'You have changed your password', 'if you did not do this please click this link');
-      res.json(data);
+      functions.mail(res, data.email, 'You have changed your password', 'if you did not do this please click this link');     //will update soon
+      res.json({ message: 'success' });
       });
     });
   }

@@ -12,7 +12,7 @@ const userSchema = Schema({
         type: String,
         required: true,
     },
-    sAnswer: {
+    answer: {
         type: String,
         required: true,
     },
@@ -20,6 +20,7 @@ const userSchema = Schema({
         type: String
     },
     fullname: String,
+    Activity: [String],
     profile: {
         preferred_location: String,
         picture: String,
@@ -37,7 +38,7 @@ const userSchema = Schema({
         },
         link: String
     }],
-    skills: [],
+    skills: [String],
     resume: String,
 });
 
