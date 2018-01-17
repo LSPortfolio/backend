@@ -10,8 +10,8 @@ module.exports = {
 
   createUser: (req, res) => {                                                   //Create user
     let { username, password, answer, email, firstname, lastname, role } = req.body;
-    fullname = `${firstname} ${lastname}`;
-    if (!username || !password) return res.status(400).send({ message: 'Nothing in input field'});
+    fullname = `${firstname} ${lastname}`;    //put logic caps first letter of first and last name;
+    if (!username || !password) return res.status(400).send({ message: 'Nothing in input field' });
     bcrypt.hash(password, hash, (err, hash) => {
       password = hash;
       const newUser = new User({ username, password, answer, email, fullname, role });
@@ -59,13 +59,13 @@ module.exports = {
     const { answer, password } = req.body;
     const decoded = jwt.verify(token, container.secret);
     User.findOne({ username: decoded.data }, (err, data) => {
-      if (data.answer !== answer) return res.status(400).send({ message: 'invalid question'});
+      if (data.answer !== answer) return res.status(400).send({ message: 'invalid question' });
       if (err || !data) res.status(400).send('Invalid username, so you are unable to change password');
       bcrypt.hash(password, hash, (err, hashedPassword) => {
         data.password = hashedPassword;
-      data.save();
-      functions.mail(res, data.email, 'You have changed your password', 'if you did not do this please click this link');     //will update soon
-      res.json({ message: 'success' });
+        data.save();
+        functions.mail(res, data.email, 'You have changed your password', 'if you did not do this please click this link');     //will update soon
+        res.json({ message: 'success' });
       });
     });
   }
