@@ -2,10 +2,10 @@ const path = require('path');
 const rootPath = path.normalize(__dirname + '/../../');
 
 module.exports = {
-  db: process.env.DATABASE_CONNECTION,
+  db: process.env.DATABASE_CONNECTION || 'mongodb://localhost:27017',
   rootPath,
   port: process.env.PORT || 5280,
-  secret: process.env.SECRET,
+  secret: 'thiouas;jiopudfjewlafueipfjewnqflueiwapbcdjvlahfvdbalsgds39213847p39uh30ry47pfh170y7p89' || process.env.SECRET,
   token: process.env.TOKEN,
   sendgridApi: process.env.SENDGRID_API_KEY,
   airtableApi: process.env.AIRTABLE_API_KEY,

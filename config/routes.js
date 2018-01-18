@@ -6,5 +6,4 @@ module.exports = app => {
   // TODO: Create route that goes to the projects App
 
   app.use('*', blankRoute);
-}  
-
+}

@@ -3,7 +3,7 @@ const sendGrid = require('@sendgrid/mail');
 const container = require('../../config/config');
 
 const mail = (res, email, title, body) => {
-  sendGrid.setApiKey(container.sendgridApi);        //this is where the api for sendGrid goes
+  sendGrid.setApiKey(container.sendgridApi);
   let msg = {
     to: email,
     from: 'rolandc5@hotmail.com',
@@ -17,8 +17,8 @@ const mail = (res, email, title, body) => {
   return;
 }
 
-const airTable = (res , name, role) => { 
-  const base = new Airtable({ apiKey: container.airtableApi}).base(container.airtableBaseKey);    //this where the api and base key for airtable goes
+const airTable = (res , name, role) => {
+  const base = new Airtable({ apiKey: container.airtableApi}).base(container.airtableBaseKey);
   base('People').create({
     "Name": name,
     "Role": role
@@ -28,7 +28,15 @@ const airTable = (res , name, role) => {
   return;
 }
 
+const formatName = (first, last) => {
+  String.prototype.capitalize = function() {
+    return this.charAt(0).toUpperCase() + this.slice(1);
+  }
+  return `${first.capitalize()} ${last.capitalize()}`;
+}
+
 module.exports = {
   mail,
   airTable,
+  formatName
 }

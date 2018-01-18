@@ -12,6 +12,10 @@ const userSchema = Schema({
         type: String,
         required: true,
     },
+    question: {
+        type: String,
+        required: true,
+    },
     answer: {
         type: String,
         required: true,
@@ -20,7 +24,7 @@ const userSchema = Schema({
         type: String
     },
     fullname: String,
-    Activity: [String],
+    activity: [String],
     profile: {
         preferred_location: String,
         picture: String,
