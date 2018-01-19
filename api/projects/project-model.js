@@ -37,8 +37,11 @@ const projectSchema = new Schema({
   },
   description: String,
   comments: [commentSchema],
-  tags: [String]
-
+  tags: [String],
+  name: {
+    type: String,
+    required: true
+  }
 })
 
 module.exports = mongoose.model('Projects', projectSchema);
