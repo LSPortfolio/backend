@@ -37,16 +37,11 @@ const projectSchema = new Schema({
   },
   description: String,
   comments: [commentSchema],
-<<<<<<< HEAD
   tags: [String],
   name: {
     type: String,
     required: true
   }
-=======
-  tags: [String]
-
->>>>>>> projects
 })
 
 module.exports = mongoose.model('Projects', projectSchema);
