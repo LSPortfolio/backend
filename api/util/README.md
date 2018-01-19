@@ -1,5 +1,6 @@
 # Utilities Folder
-This utilities folder consists of all the tools we expect to be able to use throughout the backend. Just import this index.js file (the folder), or deconstruct the specific utilities you will need into your file.
+
+	This utilities folder consists of all the tools we expect to be able to use throughout the backend. Just import this index.js file (the folder), or deconstruct the specific utilities you will need into your file.
 ----
 ### Helper functions:
 
