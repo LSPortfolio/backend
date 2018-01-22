@@ -1,27 +1,74 @@
-const User = require('./userSchema');
+const User = require('./user-model');
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const container = require('../../config/config');
-const functions = require('./functions');
-
+const async = require('async');
+const { handleErr, checkAirTableRoles, sendEmail } = require('../util');
 const hash = 11;
+const moment = require('moment');
 
 module.exports = {
 
-  createUser: (req, res) => {                                                   //Create user
+  createUser: (req, res) => {   
+    const error = {}                                              
     let { username, password, answer, email, firstname, lastname, role } = req.body;
-    fullname = `${firstname} ${lastname}`;    //put logic caps first letter of first and last name;
-    if (!username || !password) return res.status(400).send({ message: 'Nothing in input field' });
-    bcrypt.hash(password, hash, (err, hash) => {
-      password = hash;
-      const newUser = new User({ username, password, answer, email, fullname, role });
-      newUser.save((err, data) => {
-        if (err || !data) return res.status(400).send({ message: 'Username is taken' });    
-        functions.mail(res, email, 'Welcome to showcase', 'confirm user');    //Automatically sends user email that they've signed in        
-        functions.airTable(res, fullname, role);  //Sends user info to airtable if they are staff or not
-        res.json({ message: 'Success' });
-      });
-    });
+    // This function checks to see if this user already exists, if there is an error, return that, if there is a user, stop, if not, hash the password and create the new user object to be saved later.
+    const register = done => {
+      const { username, password, answer, email, firstname, lastname, role } = req.body;
+      User.find({ $or: [{ email }, { username }]}, (err, users) => {
+        if (err) {
+          error.status = 503;
+          error.message = 'Please try again later. We could not verify if this account already exists.'
+          return done (error);
+        };
+        if (users.length > 0) {
+          let type = users[0].email === email ? 'email address' : 'username'
+          error.status = 409;
+          error.message = `A user already exists with this ${type}.`;
+          return done(error)
+        };
+        bcrypt.hash(password, hash, (err, hashed) => {
+          if (err) {
+            error.status = 503;
+            error.message = 'Sorry, we could not encrypt your password. Please try again with a different password.'
+            return done(error);
+          }
+          const newUser = new User();
+          newUser.username = username;
+          newUser.password = hashed;
+          newUser.answer = answer;
+          newUser.email = email;
+          newUser.firstname = firstname;
+          newUser.lastname = lastname;
+          newUser.role = role;
+          newUser.fullname = `${firstname} ${lastname}`
+          done(null, newUser);
+        });
+      })
+    }
+    // this function takes the new user object and checks to see if that person is asking for extra permission. If so, it first checks to see if they should be granted that permission in our Airtable before saving that account in our Mongodb
+    const checkAndSave = (newAccount, done) => {
+      const saveAccount = () => newAccount.save((err, user) => err ? done({ status: 503, message: 'Server error saving your account. Please try again later.'}) : done(null, user, newAccount))
+      if (newAccount.role !== 'user') return checkAirTableRoles(newAccount.email, newAccount.role).then(() => saveAccount(), e => done({ status: 403, message: 'You are not authorized to register as this role.' }))
+      saveAccount();
+    }
+
+
+    const emailUser = (user, newAccount, done) => sendEmail.welcome(user.email).then(response => done(null, response, user, newAccount), e => done({ status: 503, message: 'Please refresh and try logging in.'}));
+    
+    async.waterfall([ register, checkAndSave, emailUser ], (err, response, user, newAccount) => {
+      if (err) return handleErr(res, err.status, err.message);
+      const payload = {
+        iss: 'Lambda_Showcase',
+        role: user.role,
+        permitted: user.role !== 'user' ? true : false,
+        exp: moment()
+          .add(10, 'days')
+          .unix()
+      }
+      const token = jwt.sign(payload, process.env.SECRET);
+      res.json({ token, user });
+    })
   },
 
   userLogin: (req, res) => {                                                  //Standard user login
@@ -31,8 +78,16 @@ module.exports = {
         if (!user) return res.status(400).json({ error : 'incorrect username' });
         bcrypt.compare(password, user.password, (err, valid) => {
           if (err || valid === false) return res.status(400).json({ error : 'incorrect password' });
-          const token = jwt.sign({ user }, container.secret);               //Will update soon
-          res.json({ success: 'yes', jtwToken: token });
+          const payload = {
+            iss: 'Lambda_Showcase',
+            role: user.role,
+            permitted: user.role !== 'user' ? true : false,
+            exp: moment()
+              .add(10, 'days')
+              .unix()
+          }
+          const token = jwt.sign(payload, container.secret);               //Will update soon
+          res.json({ success: 'yes', jtwToken: token, user });
         });
       })
       .catch((err) => {

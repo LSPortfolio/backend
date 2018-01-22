@@ -4,6 +4,10 @@ const jwt = require('jsonwebtoken');
 const sgMail = require('@sendgrid/mail');
 sgMail.setApiKey(process.env.SENDRIG_API_KEY);
 const emails = require('./emails');
+const Airtable = require('airtable');
+const Permitted = require('../user/permitted-model');
+const async = require('async');
+const base = new Airtable({ apiKey: process.env.AIRTABLE_API }).base(process.env.AIRTABLE_BASE);
 
 winston.add(winston.transports.Loggly, {
     token: process.env.LOGGY_TOKEN,
@@ -45,11 +49,57 @@ module.exports = {
             next();
         });
     },
+    isPermitted: (req, res, next) => {
+        const message = "Your account is not permitted to perform this operation.";
+        const { permitted } = req.decoded;
+        if (!permitted) return res.status(403).send({ message });
+        next();
+    },
     isAdmin: (req, res, next) => {
         const message = "You must be an admin to perform this operation.";
         const { role } = req.decoded;
         if (role !== "staff" && role !== "admin") return res.status(403).send({ message });
         next();
+    },
+    checkAirTableRoles = (email, role) => {
+			let emailFound = false;
+			const table = role === 'student' ? 'Table 1' : 'Table 2';
+			const checkOnly = () => {
+				Permitted.findOne({ email }, (err, found) => {
+					if (err) return false;
+					if (found) return true;
+				})
+			}	
+			const checkAndAdd = (record, callback) => {
+				if (record.get('email') === email) emailFound = true;
+				Permitted.findOne({ email: record.get('email')}, (err, permitted) => {
+					if (err) return callback(err);
+					if (permitted) return callback();
+					const newPermitted = new Permitted({ email: record.get('email'), airtableId: record.get('id') });
+					newPermitted.save((error, newEntry) => {
+						if (error) return callback(error);
+						callback();
+					})
+				});
+			}  
+      return new Promise((resolve, reject) => {
+        Permitted.findOne({ email }).exec()
+          .then(permitted => {
+						if (permitted) return resolve();
+						base(table).select({
+							maxRecords: 100
+						}).eachPage(function page(records, fetchNextPage) {			
+							async.each(records, checkAndAdd, err => {
+								if (err) return reject(err);
+								if (emailFound || checkOnly()) return resolve();
+								return records.length < 100 ? reject() : fetchNextPage();
+							});
+            }, function done(err) {
+              if (err) return reject(err)
+          	})
+					}, e => reject(e))
+          .catch(error => reject(error))
+      })
     },
     sendEmail: {
 			welcome: to => emailUser(emails.welcome, to),
