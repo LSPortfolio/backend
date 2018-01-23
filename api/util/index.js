@@ -45,7 +45,8 @@ module.exports = {
         if (!token) return res.status(403).send({ message });
         jwt.verify(token, process.env.SECRET, (err, decoded) => {
             if (err) return res.status(403).send({ message });
-            req.decoded = decoded;
+						req.decoded = decoded;
+						req.userId = decoded.id;
             next();
         });
     },

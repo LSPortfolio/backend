@@ -1,5 +1,6 @@
 const User = require('./user-model');
 const bcrypt = require('bcrypt');
+const crypto = require('crypto');
 const jwt = require('jsonwebtoken');
 const container = require('../../config/config');
 const async = require('async');
@@ -61,6 +62,7 @@ module.exports = {
       const payload = {
         iss: 'Lambda_Showcase',
         role: user.role,
+        id: user._id,
         permitted: user.role !== 'user' ? true : false,
         exp: moment()
           .add(10, 'days')
@@ -81,6 +83,7 @@ module.exports = {
           const payload = {
             iss: 'Lambda_Showcase',
             role: user.role,
+            id: user._id,
             permitted: user.role !== 'user' ? true : false,
             exp: moment()
               .add(10, 'days')
@@ -96,17 +99,38 @@ module.exports = {
   },
 
   forgotPassword: (req, res) => {                                             //Forgot password Part
-    const { email, answer } = req.body;
-    User.findOne({ email: email })
-      .then((data) => {
-        if (!data || answer !== data.answer) res.status(400).send({ message: 'incorrect input' });
-        const token = jwt.sign({ data: data.username }, container.secret);
-        functions.mail(res, data.email, 'Reset Password Lambda Showcase', 'Reset password?');         //will update soon, put token in 4th parameter
-        res.json({ message: 'success', temporaryToken: token });
+    const { email } = req.body;
+
+    const makeToken = done => {
+      crypto.randomBytes(20, (err, buf) => {
+        const token = buf.toString('hex');
+        done(err, token);
       })
-      .catch((err) => {
-        if (err) res.status(400).json({ message: 'You have input the incorrect Email' });
+    }
+
+    const addToUser = (token, done) => {
+      User.findOne({ email }, (err, user) => {
+        if (err) return done({ 'Server error retrieving your account details.' });
+        if (!user) return done({ 'Could not retrieve an account for that email.' });
+        user.resetPasswordToken = token;
+        user.resetPasswordExpires = Date.now() + 3600000;
+        user.save(saveErr => done(saveErr, user, token));
       })
+    }
+
+    const emailUser = (user, token, done) => {
+      sendEmail.forgotPassword(user.email, token)
+        .then(response => done(null, response, user, token), err => done(err));
+    }
+
+    async.waterfall([
+      makeToken,
+      addToUser,
+      emailUser
+    ], (err, response, user, token) => {
+      if (err) return typeof err === "string" ? handleErr(res, 501, err) : handleErr(res, 500);
+      res.status(200).send({ email: user.email });
+    });
   },
 
   resetPassword: (req, res) => {                                              //Reset Password after receiving the forgotten password email
