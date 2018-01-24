@@ -13,14 +13,13 @@ module.exports = {
     bcrypt.hash(password, 11, (err, hash) => {
       let hashedPassword = hash;
       const newUser = new User({ username, password: hashedPassword, question, answer, email, fullname, role });
-      console.log(newUser);
       newUser.save((err, data) => {
         if (err || !data) return res.status(400).send('Username is already taken!');
-        // Automatically sends user email that they've signed in
         functions.mail(res, email, 'Welcome to showcase', 'confirm user');
-        // Sends user info to airtable if they are staff or not
         functions.airTable(res, fullname, role);
-        res.json({ message: 'Success' });
+        const token = jwt.sign({ user: newUser }, container.secret);
+        console.log(token)
+        res.status(200).json({ success: 'Registration successful!', token });
       });
     });
   },
@@ -32,9 +31,8 @@ module.exports = {
         if (!user) return res.status(400).send('Incorrect Username or Password');
         bcrypt.compare(password, user.password, (err, valid) => {
           if (err || valid === false) return res.status(400).send('Incorrect Username or Password');
-          // Will update soon
           const token = jwt.sign({ user }, container.secret);
-          res.json({ success: 'yes', jtwToken: token });
+          res.status(200).json({ message: 'Login successful!', token });
         });
       })
       .catch((err) => {
