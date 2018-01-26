@@ -1,75 +1,167 @@
-const User = require('./userSchema');
+const User = require('./user-model');
 const bcrypt = require('bcrypt');
+const crypto = require('crypto');
 const jwt = require('jsonwebtoken');
-const container = require('../../config/config');
-const functions = require('./functions');
+const async = require('async');
+const { handleErr, checkAirTableRoles, sendEmail } = require('../util');
+const hash = 11;
+const moment = require('moment');
 
 module.exports = {
 
-  createUser: (req, res) => {
-    const { username, password, question, answer, email, firstname, lastname, role } = req.body;
-    const fullname = functions.formatName(firstname, lastname);
-    if (!username || !password) return res.status(400).send('Please enter valid Username or Password');
-    bcrypt.hash(password, 11, (err, hash) => {
-      let hashedPassword = hash;
-      const newUser = new User({ username, password: hashedPassword, question, answer, email, fullname, role });
-      newUser.save((err, data) => {
-        if (err || !data) return res.status(400).send('Username is already taken!');
-        functions.mail(res, email, 'Welcome to showcase', 'confirm user');
-        functions.airTable(res, fullname, role);
-        const token = jwt.sign({ user: newUser }, container.secret);
-        console.log(token)
-        res.status(200).json({ success: 'Registration successful!', token });
-      });
-    });
+  createUser: (req, res) => {   
+    const error = {}                                              
+    let { username, password, email, firstname, lastname, role } = req.body;
+    // This function checks to see if this user already exists, if there is an error, return that, if there is a user, stop, if not, hash the password and create the new user object to be saved later.
+    const register = done => {
+      const { username, password, email, firstname, lastname, role } = req.body;
+      User.find({ $or: [{ email }, { username }]}, (err, users) => {
+        if (err) {
+          error.status = 503;
+          error.message = 'Please try again later. We could not verify if this account already exists.'
+          return done (error);
+        };
+        if (users.length > 0) {
+          let type = users[0].email === email ? 'email address' : 'username'
+          error.status = 409;
+          error.message = `A user already exists with this ${type}.`;
+          return done(error)
+        };
+        bcrypt.hash(password, hash, (err, hashed) => {
+          if (err) {
+            error.status = 503;
+            error.message = 'Sorry, we could not encrypt your password. Please try again with a different password.'
+            return done(error);
+          }
+          const newUser = new User();
+          newUser.username = username;
+          newUser.password = hashed;
+          newUser.email = email;
+          newUser.firstname = firstname;
+          newUser.lastname = lastname;
+          newUser.role = role;
+          newUser.fullname = `${firstname} ${lastname}`
+          done(null, newUser);
+        });
+      })
+    }
+    // this function takes the new user object and checks to see if that person is asking for extra permission. If so, it first checks to see if they should be granted that permission in our Airtable before saving that account in our Mongodb
+    const checkAndSave = (newAccount, done) => {
+      const saveAccount = () => newAccount.save((err, user) => err ? done({ status: 503, message: 'Server error saving your account. Please try again later.'}) : done(null, user, newAccount))
+      if (newAccount.role !== 'user') return checkAirTableRoles(newAccount.email, newAccount.role).then(() => saveAccount(), e => done({ status: 403, message: 'You are not authorized to register as this role.' }))
+      saveAccount();
+    }
+
+
+    const emailUser = (user, newAccount, done) => sendEmail.welcome(user.email)
+      .then(response => done(null, response, user, newAccount), 
+        e => done({ status: 503, message: 'Please refresh and try logging in.' })
+      );
+    
+    async.waterfall([ register, checkAndSave, emailUser ], (err, response, user, newAccount) => {
+      if (err) return handleErr(res, err.status, err.message);
+      const payload = {
+        iss: 'Lambda_Showcase',
+        role: user.role,
+        id: user._id,
+        permitted: user.role !== 'user' ? true : false,
+        exp: moment()
+          .add(10, 'days')
+          .unix()
+      }
+      const token = jwt.sign(payload, process.env.SECRET);
+      res.json({ token, user });
+    })
   },
 
-  userLogin: (req, res) => {
+  userLogin: (req, res) => {                                                  //Standard user login
     const { username, password } = req.body;
     User.findOne({ username: username })
       .then((user) => {
-        if (!user) return res.status(400).send('Incorrect Username or Password');
+        if (!user) return res.status(400).json({ error : 'incorrect username' });
         bcrypt.compare(password, user.password, (err, valid) => {
-          if (err || valid === false) return res.status(400).send('Incorrect Username or Password');
-          const token = jwt.sign({ user }, container.secret);
-          res.status(200).json({ message: 'Login successful!', token });
+          if (err || valid === false) return res.status(400).json({ error : 'incorrect password' });
+          const payload = {
+            iss: 'Lambda_Showcase',
+            role: user.role,
+            id: user._id,
+            permitted: user.role !== 'user' ? true : false,
+            exp: moment()
+              .add(10, 'days')
+              .unix()
+          }
+          const token = jwt.sign(payload, container.secret);               //Will update soon
+          res.json({ success: 'yes', jtwToken: token, user });
         });
       })
       .catch((err) => {
-        if (err) return res.status(400).send('Incorrect Username or Password');
+        if (err) return res.status(400).json(err.message);
       });
   },
+  
+  
+  /*=================================================================
+  Forgot Password
+  =================================================================*/
+  forgotPassword: (req, res) => {                                           
+    const { email } = req.body;
+    //creates confirmation token to be sent to users email address
+    const makeToken = done => {
+      crypto.randomBytes(20, (err, buf) => {
+        const token = buf.toString('hex');
+        done(err, token);
+      })
+    }
 
-  forgotPassword: (req, res) => {
-    const { email, answer } = req.body;
-    User.findOne({ email: email })
-      .then((data) => {
-        if (!data || answer !== data.answer) res.status(400).send({ message: 'incorrect input' });
-        const token = jwt.sign({ data: data.username }, container.secret);
-        // Will update soon, put token in 4th parameter
-        functions.mail(res, data.email, 'Reset Password Lambda Showcase', 'Reset password?');
-        res.json({ message: 'success', temporaryToken: token });
+    const addToUser = (token, done) => {
+      User.findOne({ email }, (err, user) => {
+        console.log(user);
+        if (err) return done({ message: 'Server error retrieving your account details.'});
+        if (!user) return done({ message: 'Could not retrieve an account for that email.'});
+        user.resetPasswordToken = token;
+        user.resetPasswordExpires = Date.now() + 3600000;
+        user.save(saveErr => done(saveErr, user, token));
       })
-      .catch((err) => {
-        if (err) res.status(400).json({ message: 'You have input the incorrect Email' });
-      })
+    }
+
+    const emailUser = (user, token, done) => {
+      sendEmail.forgotPassword(user.email, token)
+        .then(response => done(null, response, user, token), err => {
+          console.log(err);
+          done(err)
+        });
+    }
+
+    async.waterfall([
+      makeToken,
+      addToUser,
+      emailUser
+    ], (err, response, user, token) => {
+      if (err) return typeof err === "string" ? handleErr(res, 501, err) : handleErr(res, 500);
+      res.status(200).send({ email: user.email });
+    });
   },
 
-  // Reset Password after receiving the forgotten password email
-  resetPassword: (req, res) => {
-    const { token } = req.params;
-    const { answer, password } = req.body;
+  resetPassword: (req, res) => {                                              //Reset Password after receiving the forgotten password email
+    const { token } = req.query;                          
+    const { password } = req.body;
     const decoded = jwt.verify(token, container.secret);
     User.findOne({ username: decoded.data }, (err, data) => {
-      if (data.answer !== answer) return res.status(400).send({ message: 'invalid question' });
       if (err || !data) res.status(400).send('Invalid username, so you are unable to change password');
       bcrypt.hash(password, hash, (err, hashedPassword) => {
         data.password = hashedPassword;
         data.save();
-        // Will update soon
-        functions.mail(res, data.email, 'You have changed your password', 'if you did not do this please click this link');
+        functions.mail(res, data.email, 'You have changed your password', 'if you did not do this please click this link');     //will update soon
         res.json({ message: 'success' });
       });
     });
+  },
+
+  findUser: (req, res) => {
+    const { username, email, fullname } = req.body;
+    User.findOne({ $or: [{ username }, { email }, { fullname }] }, (err, data) => {
+      if (err || !data) return res.status(403).send('Could not find user');
+      res.json({ send: data._id });
+    })
   }
 }
