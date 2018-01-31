@@ -61,7 +61,6 @@ module.exports = {
       saveAccount();
     }
 
-
     const emailUser = (user, newAccount, done) => sendEmail.welcome(user.email)
       .then(response => done(null, response, user, newAccount), 
         e => done({ status: 503, message: 'Please refresh and try logging in.' })
@@ -79,7 +78,14 @@ module.exports = {
           .unix()
       }
       const token = jwt.sign(payload, process.env.SECRET);
-      res.json({ token, user });
+      const userData = {
+        username: user.username,
+        fullname: user.fullname,
+        role: user.role,
+        project_drafts: user.project_drafts,
+        finishedProjects: user.finishedProjects,
+      }
+      res.status(200).json({ success: 'yes', token, userData });
     })
   },
   /*=================================================================
@@ -101,8 +107,15 @@ module.exports = {
               .add(10, 'days')
               .unix()
           }
-          const token = jwt.sign(payload, container.secret);               //Will update soon
-          res.json({ success: 'yes', jtwToken: token, user });
+          const token = jwt.sign(payload, process.env.SECRET);               //Will update soon
+          const userData = {
+            username: user.username,
+            fullname: user.fullname,
+            role: user.role,
+            project_drafts: user.project_drafts,
+            finishedProjects: user.finishedProjects,
+          }
+          res.status(200).json({ success: 'yes', token, userData });
         });
       })
       .catch((err) => {
@@ -177,6 +190,13 @@ module.exports = {
       if (err) return handleErr(res, 500);
       if (!data) return handleErr(res, 404, `That user does not exist`);
       res.json({ send: data._id });
+    });
+  },
+
+  studentsWhoFinished: (req, res) => {
+    User.find({$nor: [{finishedProjects: {$exists: false}}, {finishedProjects: {$size: 0}}]}, {fullname: 1, finishedProjects: 1}, (err, data) => {
+      if (err) return handleErr(res, 500);
+        res.json(data);
     });
   }
 }

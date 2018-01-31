@@ -74,16 +74,7 @@ module.exports = {
     newProject.createdBy = createdBy;
     newProject.save((err, data) => {
       if (err) return res.status(403).send('There was an error creating a new project, please try again');
-      if (data.progess < 80) {
-        User.findById(createdBy,
-          { new: true, safe: true, upsert: true },
-          (err, response) => {
-          if (err) return res.status(500);
-          if (!response) resturn (res, 404, 'User not found');
-          response.project_drafts.push(data._id);
-        });
-      }
-      res.send({ message: 'success', project: newProject });
+      res.send({ message: 'success', sent: data._id });
     });
   },
 
@@ -101,7 +92,7 @@ module.exports = {
 
     const addProjectToContributors = (projectData, done) => {
       const saveToUserAndEmail = (userToSave, done) => {
-        User.findByIdAndUpdate(userToSave.user,
+        User.findOneAndUpdate(userToSave.user,
           { $push: { finishedProjects: projectData._id } },
           { new: true, safe: true, upsert: true },
           (err, userData) => {

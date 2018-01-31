@@ -63,6 +63,8 @@ const userSchema = Schema({
 userSchema.methods.toJSON = function() {
     const user = this.toObject();
     delete user.password;
+    delete user.email;
+    delete user.resetPasswordExpires;
     return user;
 }
 

@@ -7,5 +7,6 @@ router.post('/login', controller.userLogin);
 router.post('/forgotPassword', controller.forgotPassword);
 router.put('/resetPassword', controller.resetPassword);
 router.put('/findUser', controller.findUser);
+router.get('/listStudentsFinished', controller.studentsWhoFinished);
 
 module.exports = router;
