@@ -15,7 +15,9 @@ const fotmat = (first, last) => {
 }
 
 module.exports = {
-
+  /*=================================================================
+  Create User
+  =================================================================*/
   createUser: (req, res) => {   
     const error = {}                                              
     let { username, password, email, firstname, lastname, role } = req.body;
@@ -80,8 +82,10 @@ module.exports = {
       res.json({ token, user });
     })
   },
-
-  userLogin: (req, res) => {                                                  //Standard user login
+  /*=================================================================
+  User Login
+  =================================================================*/
+  userLogin: (req, res) => {
     const { username, password } = req.body;
     User.findOne({ username: username })
       .then((user) => {
@@ -105,8 +109,6 @@ module.exports = {
         if (err) return res.status(400).json(err.message);
       });
   },
-  
-  
   /*=================================================================
   Forgot Password
   =================================================================*/
@@ -148,7 +150,9 @@ module.exports = {
       res.status(200).send({ email: user.email });
     });
   },
-
+  /*=================================================================
+  Reset Password
+  =================================================================*/
   resetPassword: (req, res) => {                                              //Reset Password after receiving the forgotten password email
     const { token } = req.query;                          
     const { password } = req.body;
@@ -163,7 +167,9 @@ module.exports = {
       });
     });
   },
-
+  /*=================================================================
+  Find User
+  =================================================================*/
   findUser: (req, res) => {
     const { username, email, fullname } = req.body;
     if (!username && !email && !fullname) return handleErr(res, 403, `Please make sure you have the correct search input.`);

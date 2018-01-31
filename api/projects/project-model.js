@@ -23,7 +23,7 @@ const contributorSchema = new Schema({
 });
 
 const projectSchema = new Schema({
-  media: [{ type: Schema.Types.Mixed}],
+  media: [Schema.Types.Mixed],
   cover: Schema.Types.Mixed,
   created: {
     type: Date,

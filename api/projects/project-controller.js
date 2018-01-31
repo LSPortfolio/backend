@@ -61,7 +61,7 @@ module.exports = {
 
   // The following controllers expect to come from owner of project or admin.
   createDraft: (req, res) => {
-    const { projectName, contributors, categoryIndex, tags, description, createdBy, cover } = req.body;
+    const { projectName, contributors, categoryIndex, tags, description, createdBy, cover, media } = req.body;
     if (!createdBy) return handleErr(res, 403, 'Unauthorized Access, to post projects user needs to be logged in');
     const selection = Project.schema.path('category').enumValues;
     const newProject = new Project();
