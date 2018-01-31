@@ -32,7 +32,7 @@ module.exports = {
         bcrypt.compare(password, user.password, (err, valid) => {
           if (err || valid === false) return res.status(400).send('Incorrect Username or Password');
           const token = jwt.sign({ user }, container.secret);
-          res.status(200).json({ message: 'Login successful!', token });
+          res.status(200).json({ message: 'Login successful!', token, user });
         });
       })
       .catch((err) => {
