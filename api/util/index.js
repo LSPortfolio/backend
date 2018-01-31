@@ -114,9 +114,12 @@ module.exports = {
 			const type = {
 				subject: emails.resetPassword.subject,
 				html: emails.resetPassword.html(token)
-			}
+      }
 			return emailUser(type, to);
-		}
+    },
+    pwResetSuccess: to => emailUser(emails.pwResetSuccess, to),
+    makeLive: to => emailUser(emails.makeLive, to),
+    makeDraft: to => emailUser(emails.makeDraft, to),
   },
 
   sendToCloudinary: (res, file) => {
@@ -127,4 +130,11 @@ module.exports = {
       });
     });
   },
+
+  format: (first, last) => {
+    String.prototype.capitalize = function() {
+      return this.charAt(0).toUpperCase() + this.slice(1);
+    }
+    return `${first.capitalize()} ${last.capitalize()}`;
+  }
 }

@@ -45,6 +45,10 @@ const userSchema = Schema({
         type: Schema.Types.ObjectId,
         ref: 'Projects'
     }],
+    finishedProjects: [{
+        type: Schema.Types.ObjectId,
+        ref: 'Projects'
+    }],
     created: {
         type: Date,
         default: new Date()

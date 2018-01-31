@@ -11,6 +11,14 @@ module.exports = {
     subject: 'Your Password has Changed',
     html: 'Body of the email goes in here.'
   },
+  makeLive: {
+    subject: 'Project now live',
+    html: 'Body of the email goes in here.'
+  },
+  makeDraft: {
+    subject: 'Draft in progress',
+    html: 'Progress and body of the email goes in here.'
+  },
   notify_project_like: data => {
     return {
       subject: `${data.user.username} Likes Your Project: ${data.project.name}`,

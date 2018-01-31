@@ -3,18 +3,27 @@ const bcrypt = require('bcrypt');
 const crypto = require('crypto');
 const jwt = require('jsonwebtoken');
 const async = require('async');
-const { handleErr, checkAirTableRoles, sendEmail } = require('../util');
+const { handleErr, checkAirTableRoles, sendEmail, format } = require('../util');
 const hash = 11;
 const moment = require('moment');
+
+const fotmat = (first, last) => {
+  String.prototype.capitalize = function() {
+    return this.charAt(0).toUpperCase() + this.slice(1);
+  }
+  return `${first.capitalize()} ${last.capitalize()}`;
+}
 
 module.exports = {
 
   createUser: (req, res) => {   
     const error = {}                                              
     let { username, password, email, firstname, lastname, role } = req.body;
+    const fullname = format(firstname, lastname);
+    console.log(fullname);
     // This function checks to see if this user already exists, if there is an error, return that, if there is a user, stop, if not, hash the password and create the new user object to be saved later.
     const register = done => {
-      const { username, password, email, firstname, lastname, role } = req.body;
+      const { username, password, email, fullName, role } = req.body;
       User.find({ $or: [{ email }, { username }]}, (err, users) => {
         if (err) {
           error.status = 503;
@@ -37,10 +46,8 @@ module.exports = {
           newUser.username = username;
           newUser.password = hashed;
           newUser.email = email;
-          newUser.firstname = firstname;
-          newUser.lastname = lastname;
+          newUser.fullname = fullname;
           newUser.role = role;
-          newUser.fullname = `${firstname} ${lastname}`
           done(null, newUser);
         });
       })
@@ -151,7 +158,7 @@ module.exports = {
       bcrypt.hash(password, hash, (err, hashedPassword) => {
         data.password = hashedPassword;
         data.save();
-        functions.mail(res, data.email, 'You have changed your password', 'if you did not do this please click this link');     //will update soon
+        sendEmail.pwResetSuccess(data.email)
         res.json({ message: 'success' });
       });
     });
@@ -159,9 +166,11 @@ module.exports = {
 
   findUser: (req, res) => {
     const { username, email, fullname } = req.body;
+    if (!username && !email && !fullname) return handleErr(res, 403, `Please make sure you have the correct search input.`);
     User.findOne({ $or: [{ username }, { email }, { fullname }] }, (err, data) => {
-      if (err || !data) return res.status(403).send('Could not find user');
+      if (err) return handleErr(res, 500);
+      if (!data) return handleErr(res, 404, `That user does not exist`);
       res.json({ send: data._id });
-    })
+    });
   }
 }
