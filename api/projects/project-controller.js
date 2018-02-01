@@ -150,7 +150,15 @@ module.exports = {
       });
   },
 
-  updateCover: (req, res) => {},
+  updateCover: (req, res) => {
+    Project.findByIdAndUpdate(req.params.id, 
+    { $set: { cover: req.body.cover }},
+    { new: true, safe: true, upsert: true },
+    (err, response) => {
+      if (err) return handleErr(res, 500);
+      res.json(reponse);
+    });
+  },
 
   updateCategory: (req, res) => {
     const selection = Project.schema.path('category').enumValues;

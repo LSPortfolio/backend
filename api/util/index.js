@@ -29,7 +29,7 @@ const emailUser = (type, to, subject, body) => {
   return new Promise((resolve, reject) => {
     const msg = {
       to,
-      from: 'lambdaschool@lambdashowcase.com',
+      from: 'lambdaschool@lambdashowcase.com',    //change email here
       subject: type.subject || subject,
       html: type.html || body,
       //TODO: Get tpl id

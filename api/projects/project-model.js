@@ -15,9 +15,8 @@ const commentSchema = new Schema({
 
 const contributorSchema = new Schema({
   user: {
-    type: String
-    //type: Schema.Types.ObjectId,
-    //ref: 'Users'
+    type: Schema.Types.ObjectId,
+    ref: 'Users'
   },
   role: String,
   responsibilities: String
@@ -44,14 +43,13 @@ const projectSchema = new Schema({
     type: String,
     required: true
   },
-  /*progress: {
+  progress: {
     type: Number,
     default: 0
-  },*/
+  },
   createdBy: {
-    type: String
-    //type: Schema.Types.ObjectId,
-    //ref: 'User'
+    type: Schema.Types.ObjectId,
+    ref: 'User'
   },
   live: {
     type: Boolean,
@@ -59,10 +57,10 @@ const projectSchema = new Schema({
   }
 });
 
-/*
+
 projectSchema.pre('save', function(next) {
   let progress = 0;
-  if (this.media) progress += 25;
+  if (this.media.length > 0) progress += 25;
   if (this.contributors.length > 0) progress += 10;
   if (this.description.length > 15) progress += 45;
   if (this.projectName) progress += 5;
@@ -71,5 +69,5 @@ projectSchema.pre('save', function(next) {
   this.progress = progress;
   next();
 });
-*/
+
 module.exports = mongoose.model('Projects', projectSchema);
