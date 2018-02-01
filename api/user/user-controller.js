@@ -97,11 +97,6 @@ module.exports = {
       .then((user) => {
         if (!user) return res.status(400).json({ error : 'incorrect username' });
         bcrypt.compare(password, user.password, (err, valid) => {
-<<<<<<< HEAD
-          if (err || valid === false) return res.status(400).send('Incorrect Username or Password');
-          const token = jwt.sign({ user }, container.secret);
-          res.status(200).json({ message: 'Login successful!', token, user });
-=======
           if (err || valid === false) return res.status(400).json({ error : 'incorrect password' });
           const payload = {
             iss: 'Lambda_Showcase',
@@ -121,7 +116,6 @@ module.exports = {
             finishedProjects: user.finishedProjects,
           }
           res.status(200).json({ success: 'yes', token, userData });
->>>>>>> roland
         });
       })
       .catch((err) => {
