@@ -65,6 +65,7 @@ userSchema.methods.toJSON = function() {
     delete user.password;
     delete user.email;
     delete user.resetPasswordExpires;
+    delete resetPasswordToken;
     return user;
 }
 

@@ -78,6 +78,16 @@ module.exports = {
     });
   },
 
+  saveDraft: (req, res) => {
+    Project.findByIdAndUpdate(req.params.id, 
+      { $set: req.body.project },
+      { new: true, upsert: true, safe: true },
+      (err, project) => {
+        if (err) return handleErr(res, 503, 'Server error trying to update this project.');
+        res.json(project);
+      })
+  },
+
   makeLive: (req, res) => {
     // make sure the project shows up on contributors' accounts.
     const turnToLive = (done) => {
@@ -86,6 +96,9 @@ module.exports = {
         { new: true, safe: true, upsert: true },
         (err, response) => {
           if (err) return handleErr(res, 500);
+          if (response.progress < 80) {
+            return handleErr(res, 411, 'Project must have a score of over 80 make their project live');
+          }
           done(null, response);
       })
     }
@@ -210,16 +223,6 @@ module.exports = {
         res.json(data);
       })
       .catch(err => res.status(400).send({ message: 'Could not find' }));
-  },
-
-  saveDraft: (req, res) => {
-    Project.findByIdAndUpdate(req.params.id, 
-      { $set: req.body.project },
-      { new: true, upsert: true, safe: true },
-      (err, project) => {
-        if (err) return handleErr(res, 503, 'Server error trying to update this project.');
-        res.json(project);
-      })
   },
 
   // Admin only controllers.

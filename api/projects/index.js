@@ -1,11 +1,12 @@
 const express = require('express');
 const router = express.Router();
 const controller = require('./project-controller');
+const { isLoggedIn, isPermitted } = require('../util/index');
 
 router.get('/all', controller.all);
 router.get('/tags', controller.tagSearch);
-router.post('/create', controller.createDraft);
-router.put('/remcon:id', controller.removeContributor);
+router.post('/create?token=', isLoggedIn, isPermitted, controller.createDraft);
+router.put('/removeContributor:id', controller.removeContributor);
 router.put('/updateCategory:id', controller.updateCategory);
 router.put('/makeLive:id', controller.makeLive);
 router.put('/deleteProject:id', controller.deleteProject);

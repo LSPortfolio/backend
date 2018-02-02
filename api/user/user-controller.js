@@ -1,18 +1,11 @@
 const User = require('./user-model');
 const bcrypt = require('bcrypt');
-const crypto = require('crypto');
+const crypto = require('crypto-js');
 const jwt = require('jsonwebtoken');
 const async = require('async');
 const { handleErr, checkAirTableRoles, sendEmail, format } = require('../util');
 const hash = 11;
 const moment = require('moment');
-
-const fotmat = (first, last) => {
-  String.prototype.capitalize = function() {
-    return this.charAt(0).toUpperCase() + this.slice(1);
-  }
-  return `${first.capitalize()} ${last.capitalize()}`;
-}
 
 module.exports = {
   /*=================================================================
@@ -22,7 +15,6 @@ module.exports = {
     const error = {}                                              
     let { username, password, email, firstname, lastname, role } = req.body;
     const fullname = format(firstname, lastname);
-    console.log(fullname);
     // This function checks to see if this user already exists, if there is an error, return that, if there is a user, stop, if not, hash the password and create the new user object to be saved later.
     const register = done => {
       const { username, password, email, fullName, role } = req.body;
@@ -78,14 +70,7 @@ module.exports = {
           .unix()
       }
       const token = jwt.sign(payload, process.env.SECRET);
-      const userData = {
-        username: user.username,
-        fullname: user.fullname,
-        role: user.role,
-        project_drafts: user.project_drafts,
-        finishedProjects: user.finishedProjects,
-      }
-      res.status(200).json({ success: 'yes', token, userData });
+      res.status(200).json({ success: 'yes', jwtToken: token, userData });
     })
   },
   /*=================================================================
@@ -108,19 +93,19 @@ module.exports = {
               .unix()
           }
           const token = jwt.sign(payload, process.env.SECRET);               //Will update soon
-          const userData = {
-            username: user.username,
-            fullname: user.fullname,
-            role: user.role,
-            project_drafts: user.project_drafts,
-            finishedProjects: user.finishedProjects,
-          }
-          res.status(200).json({ success: 'yes', token, userData });
+          res.status(200).json({ success: 'yes', token, user });
         });
       })
       .catch((err) => {
         if (err) return res.status(400).json(err.message);
       });
+  },
+  userHome: (req, res) => {
+    User.findOne(req.userId, (err, data) => {
+      if (err) return handleErr(res, 500);
+      if (!data) return handleErr(res, 404, 'Could not find User');
+      res.json({ user: data, otherData: req.decoded })
+    });
   },
   /*=================================================================
   Forgot Password
@@ -129,15 +114,16 @@ module.exports = {
     const { email } = req.body;
     //creates confirmation token to be sent to users email address
     const makeToken = done => {
-      crypto.randomBytes(20, (err, buf) => {
-        const token = buf.toString('hex');
+        let err = '';
+        const token = crypto.AES.encrypt('my message', process.env.SECRET);
+        if (!token) {
+          let err = handleErr(res, 404, 'Error creating token');
+        }
         done(err, token);
-      })
     }
 
     const addToUser = (token, done) => {
       User.findOne({ email }, (err, user) => {
-        console.log(user);
         if (err) return done({ message: 'Server error retrieving your account details.'});
         if (!user) return done({ message: 'Could not retrieve an account for that email.'});
         user.resetPasswordToken = token;
@@ -160,19 +146,22 @@ module.exports = {
       emailUser
     ], (err, response, user, token) => {
       if (err) return typeof err === "string" ? handleErr(res, 501, err) : handleErr(res, 500);
-      res.status(200).send({ email: user.email });
+      res.status(200).send({ email: user.email, sendToken: user.resetPasswordToken });
     });
   },
   /*=================================================================
   Reset Password
+  This allows the user to reset the password after receiving a authenticator token
   =================================================================*/
-  resetPassword: (req, res) => {                                              //Reset Password after receiving the forgotten password email
-    const { token } = req.query;                          
-    const { password } = req.body;
-    const decoded = jwt.verify(token, container.secret);
-    User.findOne({ username: decoded.data }, (err, data) => {
-      if (err || !data) res.status(400).send('Invalid username, so you are unable to change password');
+  resetPassword: (req, res) => {
+    //const { token } req.query;
+    const { password, token } = req.body;
+    if (!password || !token) return handleErr(res, 404, 'Unauthorized Access!! Do you even know what this is?');
+    User.findOne({ resetPasswordToken: token }, (err, data) => {
+      if (err) return handleErr(res, 500);
+      if (!data) return handleErr(res, 404, 'User not found');
       bcrypt.hash(password, hash, (err, hashedPassword) => {
+        if (err) return handleErr(res, 400, 'Error caused by an issue in hashing the password');
         data.password = hashedPassword;
         data.save();
         sendEmail.pwResetSuccess(data.email)
