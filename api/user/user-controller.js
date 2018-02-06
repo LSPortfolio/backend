@@ -1,6 +1,6 @@
 const User = require('./user-model');
 const bcrypt = require('bcrypt');
-const crypto = require('crypto');
+const crypto = require('crypto-js');
 const jwt = require('jsonwebtoken');
 const async = require('async');
 const { handleErr, checkAirTableRoles, sendEmail, format } = require('../util');
@@ -22,7 +22,7 @@ module.exports = {
     const error = {}                                              
     let { username, password, email, firstname, lastname, role } = req.body;
     const fullname = format(firstname, lastname);
-    console.log(fullname);
+    const selection = User.schema.path('role').enumValues;
     // This function checks to see if this user already exists, if there is an error, return that, if there is a user, stop, if not, hash the password and create the new user object to be saved later.
     const register = done => {
       const { username, password, email, fullName, role } = req.body;
@@ -49,7 +49,7 @@ module.exports = {
           newUser.password = hashed;
           newUser.email = email;
           newUser.fullname = fullname;
-          newUser.role = role;
+          newUser.role = selection[role];
           done(null, newUser);
         });
       })
@@ -78,14 +78,7 @@ module.exports = {
           .unix()
       }
       const token = jwt.sign(payload, process.env.SECRET);
-      const userData = {
-        username: user.username,
-        fullname: user.fullname,
-        role: user.role,
-        project_drafts: user.project_drafts,
-        finishedProjects: user.finishedProjects,
-      }
-      res.status(200).json({ success: 'yes', token, userData });
+      res.status(200).json({ success: 'Registration successful!', token });
     })
   },
   /*=================================================================
@@ -95,9 +88,9 @@ module.exports = {
     const { username, password } = req.body;
     User.findOne({ username: username })
       .then((user) => {
-        if (!user) return res.status(400).json({ error : 'incorrect username' });
+        if (!user) return handleErr(res, 400, 'incorrect username');
         bcrypt.compare(password, user.password, (err, valid) => {
-          if (err || valid === false) return res.status(400).json({ error : 'incorrect password' });
+          if (err || valid === false) return handleErr(res, 400, 'incorrect password');
           const payload = {
             iss: 'Lambda_Showcase',
             role: user.role,
@@ -115,12 +108,18 @@ module.exports = {
             project_drafts: user.project_drafts,
             finishedProjects: user.finishedProjects,
           }
-          res.status(200).json({ success: 'yes', token, userData });
+          res.status(200).json({ message: 'Login successful!', token });
         });
       })
       .catch((err) => {
-        if (err) return res.status(400).json(err.message);
+        if (err) return handleErr(res, 500, 'Server error');
       });
+  },
+
+  home: (req, res) => {
+    User.findById(req.userId, (err, data) => {
+      res.json(data);
+    });
   },
   /*=================================================================
   Forgot Password
@@ -129,10 +128,8 @@ module.exports = {
     const { email } = req.body;
     //creates confirmation token to be sent to users email address
     const makeToken = done => {
-      crypto.randomBytes(20, (err, buf) => {
-        const token = buf.toString('hex');
+      const token = crypto.AES.encrypt('This is a token!', process.env.SECRET);
         done(err, token);
-      })
     }
 
     const addToUser = (token, done) => {
@@ -166,12 +163,13 @@ module.exports = {
   /*=================================================================
   Reset Password
   =================================================================*/
-  resetPassword: (req, res) => {                                              //Reset Password after receiving the forgotten password email
-    const { token } = req.query;                          
-    const { password } = req.body;
-    const decoded = jwt.verify(token, container.secret);
-    User.findOne({ username: decoded.data }, (err, data) => {
-      if (err || !data) res.status(400).send('Invalid username, so you are unable to change password');
+  resetPassword: (req, res) => {                                              //Reset Password after receiving the forgotten password email                     
+    const { password, token } = req.body;
+    if (!token) return handleErr(res, 401, 'You are not authorized to access this route');
+    if (!password) return handleErr(res, 413, 'Input a new password');
+    User.findOne({ resetPasswordToken: token }, (err, data) => {
+      if (err) res.status(400).send('Server error try again later');
+      if (!data) return res.status(404).send('Invalid token');
       bcrypt.hash(password, hash, (err, hashedPassword) => {
         data.password = hashedPassword;
         data.save();
@@ -200,3 +198,7 @@ module.exports = {
     });
   }
 }
+
+  /*=================================================================
+  Admin controllers
+  =================================================================*/
