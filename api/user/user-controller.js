@@ -82,9 +82,9 @@ module.exports = {
     const { username, password } = req.body;
     User.findOne({ username: username })
       .then((user) => {
-        if (!user) return handleErr(res, 400, 'incorrect username');
+        if (!user) return handleErr(res, 401, 'incorrect username');
         bcrypt.compare(password, user.password, (err, valid) => {
-          if (err || valid === false) return handleErr(res, 400, 'incorrect password');
+          if (err || valid === false) return handleErr(res, 401, 'incorrect password');
           const payload = {
             iss: 'Lambda_Showcase',
             role: user.role,
@@ -153,16 +153,16 @@ module.exports = {
   resetPassword: (req, res) => {                                              //Reset Password after receiving the forgotten password email                     
     const { token, password } = req.body;
     if (!token) return handleErr(res, 401, 'You are not authorized to access this route');
-    if (!password) return handleErr(res, 413, 'Input a new password');
+    if (!password) return handleErr(res, 411, 'Input a new password');
     User.findOne({ resetPasswordToken: token }, (err, data) => {
       if (err) return handleErr(res, 500);
-      if (!data) return handleErr(res, 404, 'Invalid token');
+      if (!data) return handleErr(res, 401, 'Invalid token');
       bcrypt.hash(password, hash, (err, hashedPassword) => {
         data.password = hashedPassword;
         data.save();
         console.log(data.email);
         sendEmail.pwResetSuccess(data.email);
-        res.json({ message: 'success' });
+        res.status(200).json({ message: 'success' });
       });
     });
   },
@@ -175,14 +175,14 @@ module.exports = {
     User.findOne({ $or: [{ username }, { email }, { fullname }] }, (err, data) => {
       if (err) return handleErr(res, 500);
       if (!data) return handleErr(res, 404, `That user does not exist`);
-      res.json({ send: data._id });
+      res.status(200).json({ send: data._id });
     });
   },
 
   studentsWhoFinished: (req, res) => {
     User.find({$nor: [{finishedProjects: {$exists: false}}, {finishedProjects: {$size: 0}}]}, {fullname: 1, finishedProjects: 1}, (err, data) => {
       if (err) return handleErr(res, 500);
-        res.json(data);
+        res.status(200).json(data);
     });
   }
 }
