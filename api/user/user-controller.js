@@ -7,13 +7,6 @@ const { handleErr, checkAirTableRoles, sendEmail, format } = require('../util');
 const hash = 11;
 const moment = require('moment');
 
-const fotmat = (first, last) => {
-  String.prototype.capitalize = function() {
-    return this.charAt(0).toUpperCase() + this.slice(1);
-  }
-  return `${first.capitalize()} ${last.capitalize()}`;
-}
-
 module.exports = {
   /*=================================================================
   Create User
@@ -56,9 +49,10 @@ module.exports = {
     }
     // this function takes the new user object and checks to see if that person is asking for extra permission. If so, it first checks to see if they should be granted that permission in our Airtable before saving that account in our Mongodb
     const checkAndSave = (newAccount, done) => {
-      const saveAccount = () => newAccount.save((err, user) => err ? done({ status: 503, message: 'Server error saving your account. Please try again later.'}) : done(null, user, newAccount))
+      newAccount.save((err, user) => err ? done({ status: 503, message: 'Server error saving your account. Please try again later.'}) : done(null, user, newAccount));
+      /*const saveAccount = () => newAccount.save((err, user) => err ? done({ status: 503, message: 'Server error saving your account. Please try again later.'}) : done(null, user, newAccount))
       if (newAccount.role !== 'user') return checkAirTableRoles(newAccount.email, newAccount.role).then(() => saveAccount(), e => done({ status: 403, message: 'You are not authorized to register as this role.' }))
-      saveAccount();
+      saveAccount();*/
     }
 
     const emailUser = (user, newAccount, done) => sendEmail.welcome(user.email)
@@ -100,14 +94,7 @@ module.exports = {
               .add(10, 'days')
               .unix()
           }
-          const token = jwt.sign(payload, process.env.SECRET);               //Will update soon
-          const userData = {
-            username: user.username,
-            fullname: user.fullname,
-            role: user.role,
-            project_drafts: user.project_drafts,
-            finishedProjects: user.finishedProjects,
-          }
+          const token = jwt.sign(payload, process.env.SECRET);
           res.status(200).json({ message: 'Login successful!', token });
         });
       })
@@ -129,12 +116,13 @@ module.exports = {
     //creates confirmation token to be sent to users email address
     const makeToken = done => {
       const token = crypto.AES.encrypt('This is a token!', process.env.SECRET);
+      let err = '';
+      if (!token) return done({ message: 'Server error creating a reset token' });
         done(err, token);
     }
 
     const addToUser = (token, done) => {
       User.findOne({ email }, (err, user) => {
-        console.log(user);
         if (err) return done({ message: 'Server error retrieving your account details.'});
         if (!user) return done({ message: 'Could not retrieve an account for that email.'});
         user.resetPasswordToken = token;
@@ -146,7 +134,6 @@ module.exports = {
     const emailUser = (user, token, done) => {
       sendEmail.forgotPassword(user.email, token)
         .then(response => done(null, response, user, token), err => {
-          console.log(err);
           done(err)
         });
     }
@@ -164,16 +151,17 @@ module.exports = {
   Reset Password
   =================================================================*/
   resetPassword: (req, res) => {                                              //Reset Password after receiving the forgotten password email                     
-    const { password, token } = req.body;
+    const { token, password } = req.body;
     if (!token) return handleErr(res, 401, 'You are not authorized to access this route');
     if (!password) return handleErr(res, 413, 'Input a new password');
     User.findOne({ resetPasswordToken: token }, (err, data) => {
-      if (err) res.status(400).send('Server error try again later');
-      if (!data) return res.status(404).send('Invalid token');
+      if (err) return handleErr(res, 500);
+      if (!data) return handleErr(res, 404, 'Invalid token');
       bcrypt.hash(password, hash, (err, hashedPassword) => {
         data.password = hashedPassword;
         data.save();
-        sendEmail.pwResetSuccess(data.email)
+        console.log(data.email);
+        sendEmail.pwResetSuccess(data.email);
         res.json({ message: 'success' });
       });
     });
