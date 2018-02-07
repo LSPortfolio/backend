@@ -73,7 +73,7 @@ module.exports = {
     newProject.tags = tags;
     newProject.createdBy = createdBy;
     newProject.save((err, data) => {
-      if (err) return res.status(403).send('There was an error creating a new project, please try again');
+      if (err) return handleErr(res, 403, 'There was an error creating a new project');
       res.send({ message: 'success', sent: data._id });
     });
   },
@@ -85,6 +85,9 @@ module.exports = {
         { $set: { live: true }},
         { new: true, safe: true, upsert: true },
         (err, response) => {
+          if (response.progress < 80) {
+            return handleErr(res, 413, 'Project unable to make live... Project draft has not met the specified requirements');
+          }
           if (err) return handleErr(res, 500);
           done(null, response);
       })
