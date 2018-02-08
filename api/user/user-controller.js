@@ -171,10 +171,12 @@ module.exports = {
   =================================================================*/
   findUser: (req, res) => {
     const { data } = req.body;
+    console.log(data);
     User.findOne({ $or: [{ username: data }, { email: data }, { fullname: data }] }, (err, data) => {
       if (err) return handleErr(res, 500);
       if (!data) return handleErr(res, 404, `That user does not exist`);
-      res.status(200).json({ id: data._id, name: data.fullname });
+      console.log('it pass!');
+      res.status(200).json(data);
     });
   },
 

@@ -37,6 +37,7 @@ const projectSchema = new Schema({
     default: 'web'
   },
   description: String,
+  github: String,
   comments: [commentSchema],
   tags: [String],
   projectName: {
@@ -57,7 +58,7 @@ const projectSchema = new Schema({
   }
 });
 
-
+/*
 projectSchema.pre('save', function(next) {
   let progress = 0;
   if (this.media.length > 0) progress += 25;
@@ -68,6 +69,6 @@ projectSchema.pre('save', function(next) {
   if (this.cover) progress += 10;
   this.progress = progress;
   next();
-});
+});*/
 
 module.exports = mongoose.model('Projects', projectSchema);

@@ -61,17 +61,18 @@ module.exports = {
 
   // The following controllers expect to come from owner of project or admin.
   createDraft: (req, res) => {
-    const { projectName, contributors, categoryIndex, tags, description, createdBy, cover, media } = req.body;
+    const { projectName, contributors, categoryIndex, tags, description, createdBy, cover, media, github } = req.body;
     if (!createdBy) return handleErr(res, 403, 'Unauthorized Access, to post projects user needs to be logged in');
     //const selection = Project.schema.path('category').enumValues;
     const newProject = new Project();
     newProject.projectName = projectName;
-    newProject.cover = cover;
+    newProject.media = media;
     //newProject.contributors = contributors;
     //newProject.category = selection[categoryIndex];
     newProject.description = description;
     newProject.tags = tags;
      //newProject.createdBy = createdBy;
+    newProject.github = github;
     newProject.save((err, data) => {
       if (err) return handleErr(res, 403, 'There was an error creating a new project');
       res.send({ message: 'success', sent: data._id });
@@ -85,9 +86,9 @@ module.exports = {
         { $set: { live: true }},
         { new: true, safe: true, upsert: true },
         (err, response) => {
-          if (response.progress < 80) {
+          /*if (response.progress < 80) {
             return handleErr(res, 413, 'Project unable to make live... Project draft has not met the specified requirements');
-          }
+          }*/
           if (err) return handleErr(res, 500);
           done(null, response);
       })
