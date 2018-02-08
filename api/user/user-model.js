@@ -15,23 +15,23 @@ const userSchema = Schema({
         type: String
     },
     fullname: String,
-    Activity: [String],
-    profile: {
+    //Activity: [String],
+    /*profile: {
         preferred_location: String,
         picture: String,
         subtitle: String,
         location: String,
         bio: String
-    },
+    },*/
     role: {
         type: String,
         enum: ['user', 'student', 'admin'],
         default: 'user'
     },
-    staff: {
+    /*staff: {
         type: Boolean,
         default: 'false'
-    },
+    },*/
     social: [{
         site: {
             type: String,
@@ -40,7 +40,7 @@ const userSchema = Schema({
         link: String
     }],
     skills: [String],
-    resume: String,
+    //resume: String,
     project_drafts: [{
         type: Schema.Types.ObjectId,
         ref: 'Projects'

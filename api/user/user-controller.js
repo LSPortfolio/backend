@@ -170,17 +170,16 @@ module.exports = {
   Find User
   =================================================================*/
   findUser: (req, res) => {
-    const { username, email, fullname } = req.body;
-    if (!username && !email && !fullname) return handleErr(res, 403, `Please make sure you have the correct search input.`);
-    User.findOne({ $or: [{ username }, { email }, { fullname }] }, (err, data) => {
+    const { data } = req.body;
+    User.findOne({ $or: [{ username: data }, { email: data }, { fullname: data }] }, (err, data) => {
       if (err) return handleErr(res, 500);
       if (!data) return handleErr(res, 404, `That user does not exist`);
-      res.status(200).json({ send: data._id });
+      res.status(200).json({ id: data._id, name: data.fullname });
     });
   },
 
   studentsWhoFinished: (req, res) => {
-    User.find({$nor: [{finishedProjects: {$exists: false}}, {finishedProjects: {$size: 0}}]}, {fullname: 1, finishedProjects: 1}, (err, data) => {
+    User.find({}, {finishedProjects: 1}, { fullname: 1 }, (err, data) => {
       if (err) return handleErr(res, 500);
         res.status(200).json(data);
     });

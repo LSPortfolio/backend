@@ -12,7 +12,7 @@ module.exports = {
   },
 
   all: (req, res) => {
-    Project.find().then(projects => projects.length > 0 ? res.json(projects) : 'handle errors here', e => 'handle errros here');
+    Project.find().then(projects => projects.length > 0 ? res.json(projects) : handleErr(res, 500, 'server error'), e => handleError(res, 403, 'there is no projects'));
   },
 
   deleteProject: (req, res) => {
@@ -63,21 +63,21 @@ module.exports = {
   createDraft: (req, res) => {
     const { projectName, contributors, categoryIndex, tags, description, createdBy, cover, media } = req.body;
     if (!createdBy) return handleErr(res, 403, 'Unauthorized Access, to post projects user needs to be logged in');
-    const selection = Project.schema.path('category').enumValues;
+    //const selection = Project.schema.path('category').enumValues;
     const newProject = new Project();
     newProject.projectName = projectName;
     newProject.cover = cover;
-    newProject.contributors = contributors;
-    newProject.category = selection[categoryIndex];
+    //newProject.contributors = contributors;
+    //newProject.category = selection[categoryIndex];
     newProject.description = description;
     newProject.tags = tags;
-    newProject.createdBy = createdBy;
+     //newProject.createdBy = createdBy;
     newProject.save((err, data) => {
       if (err) return handleErr(res, 403, 'There was an error creating a new project');
       res.send({ message: 'success', sent: data._id });
     });
   },
-
+  
   makeLive: (req, res) => {
     // make sure the project shows up on contributors' accounts.
     const turnToLive = (done) => {

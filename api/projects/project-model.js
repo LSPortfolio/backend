@@ -4,7 +4,7 @@ const Schema = mongoose.Schema;
 const commentSchema = new Schema({
   author: {
     type: Schema.Types.ObjectId,
-    ref: 'Users'
+    ref: 'User'
   },
   text: String,
   created: {
@@ -16,7 +16,7 @@ const commentSchema = new Schema({
 const contributorSchema = new Schema({
   user: {
     type: Schema.Types.ObjectId,
-    ref: 'Users'
+    ref: 'User'
   },
   role: String,
   responsibilities: String
