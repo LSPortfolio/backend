@@ -8,7 +8,7 @@ module.exports = {
   single: (req, res) => {
     const { id } = req.params;
     Project.findById(id)
-      .then(project => project ? res.json(project) : 'handle errors here', e => 'handle errors here.');
+      .then(project => project ? res.json(project) : handleErr(res, 500, 'server error'), e => handleError(res, 403, 'there is no project');
   },
 
   all: (req, res) => {
