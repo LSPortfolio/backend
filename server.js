@@ -7,5 +7,6 @@ require('./config/express')(app,config);
 require('./config/mongoose')(config);
 require('./config/routes')(app);
 
-app.listen(config.port);
-console.log('The Lambda School Portfolio server is up and running.');
+app.listen(app.get(config.port), () => {
+  console.log('The Lambda School Portfolio server is up and running.');
+});
