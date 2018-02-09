@@ -7,5 +7,5 @@ module.exports = app => {
   app.use('/user', require('../api/user'));
   app.use('/project', require('../api/projects'));
 
-  app.use('*', blankRoute);
+  app.get('*', blankRoute);
 }
