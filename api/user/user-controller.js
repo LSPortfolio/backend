@@ -11,6 +11,9 @@ module.exports = {
   /*=================================================================
   Create User
   =================================================================*/
+  hi: (req, res) => {
+    res.status(200).json('hello!');
+  },
   createUser: (req, res) => {   
     const error = {}                                              
     let { username, password, email, firstname, lastname, role } = req.body;
