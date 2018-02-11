@@ -3,7 +3,6 @@ module.exports = app => {
 
   // TODO: Create route that goes to the users App
 
-
   app.use('/user', require('../api/user'));
   app.use('/project', require('../api/projects'));
 

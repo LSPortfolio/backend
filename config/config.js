@@ -3,7 +3,7 @@ const rootPath = path.normalize(__dirname + '/../../');
 
 module.exports = {
   db: process.env.DATABASE_CONNECTION,
-  port: process.env.PORT || 5000,
+  port: process.env.PORT || 3030,
   secret: process.env.SECRET,
   token: process.env.TOKEN,
   sendgridApi: process.env.SENDGRID_API_KEY,
