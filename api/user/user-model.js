@@ -12,7 +12,9 @@ const userSchema = Schema({
         required: true,
     },
     email: {
-        type: String
+        type: String,
+        required: true,
+        unique: true,
     },
     fullname: String,
     //Activity: [String],

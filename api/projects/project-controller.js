@@ -1,7 +1,9 @@
-const async = require('async');
 const Project = require('./project-model');
 const User = require('../user/user-model');
-const { handleErr, sendToCloudinary,  sendEmail } = require('../util');
+
+const handleErr = (res, status, message, data) => {
+  return status === 500 ? res.status(500).send({ message: 'Server error with this operation.' }) : res.status(status).send({ message });
+}
 
 
 module.exports = {
@@ -58,174 +60,22 @@ module.exports = {
     Project.find({ tags })
       .then(data => res.json(data)).catch(err => res.status(400).json({ message: 'Nothing found with that tag' }));
   },
-
-  // The following controllers expect to come from owner of project or admin.
-  createDraft: (req, res) => {
+  
+  create: (req, res) => {
     const { projectName, contributors, categoryIndex, tags, description, createdBy, cover, media, github } = req.body;
-    if (!createdBy) return handleErr(res, 403, 'Unauthorized Access, to post projects user needs to be logged in');
     //const selection = Project.schema.path('category').enumValues;
     const newProject = new Project();
     newProject.projectName = projectName;
     newProject.media = media;
-    //newProject.contributors = contributors;
+    newProject.contributors = contributors;
     //newProject.category = selection[categoryIndex];
     newProject.description = description;
     newProject.tags = tags;
-     //newProject.createdBy = createdBy;
+    newProject.createdBy = createdBy;
     newProject.github = github;
     newProject.save((err, data) => {
       if (err) return handleErr(res, 403, 'There was an error creating a new project');
       res.send({ message: 'success', sent: data._id });
     });
   },
-  
-  makeLive: (req, res) => {
-    // make sure the project shows up on contributors' accounts.
-    const turnToLive = (done) => {
-      Project.findByIdAndUpdate(req.params.id,
-        { $set: { live: true }},
-        { new: true, safe: true, upsert: true },
-        (err, response) => {
-          /*if (response.progress < 80) {
-            return handleErr(res, 413, 'Project unable to make live... Project draft has not met the specified requirements');
-          }*/
-          if (err) return handleErr(res, 500);
-          done(null, response);
-      })
-    }
-
-    const addProjectToContributors = (projectData, done) => {
-      const saveToUserAndEmail = (userToSave, done) => {
-        User.findOneAndUpdate(userToSave.user,
-          { $push: { finishedProjects: projectData._id } },
-          { new: true, safe: true, upsert: true },
-          (err, userData) => {
-            if (err) return handleErr(res, 500);
-            if (!userData) return handleErr(res, 404, `Error updating ${userData.email}`);
-            sendEmail.makeLive(userData.email, projectData)
-              .then(resolved => done())
-              .catch(e => callback({ message: `Error sending email to ${userData.email}` }));
-        });
-      }
-      async.each(projectData.contributors, saveToUserAndEmail, (err) => {
-        if (err) return done(err);
-        done (null, projectData);
-      });
-
-    }
-
-    async.waterfall([
-      turnToLive,
-      addProjectToContributors
-    ], (err, result) => {
-      if (err) res.send(err);
-      res.json(result);
-    });
-  },
-
-  makeHidden: (req, res) => {
-    // make sure to account for the fact that the project still shows up on contributors' accounts, remove them.
-    Project.findByIdAndUpdate(req.params.id,
-      { $set: { live: false }},
-      { new: true, safe: true, upsert: true },
-      (err, response) => {
-        if (err) return handleErr(res, 500);
-        res.json(response);
-      });
-  },
-
-  addMedia: (req, res) => {
-    Project.findByIdAndUpdate(req.params.id,
-      { $push: { media: req.body.media }},
-      { safe: true, new: true, upsert: true },
-      (err, response) => {
-        if (err) return handleErr(res, 500);
-        res.json(response);
-      });
-  },
-
-  removeMedia: (req, res) => {
-    Project.findByIdAndUpdate(req.params.projectId, 
-      { $pull: { media: { _id: req.params.mediaId }}},
-      { new: true, safe: true, upsert: true },
-      (err, response) => {
-        if (err) return handleErr(res,500);
-        res.json(response);
-      });
-  },
-
-  updateCover: (req, res) => {
-    Project.findByIdAndUpdate(req.params.id, 
-    { $set: { cover: req.body.cover }},
-    { new: true, safe: true, upsert: true },
-    (err, response) => {
-      if (err) return handleErr(res, 500);
-      res.json(reponse);
-    });
-  },
-
-  updateCategory: (req, res) => {
-    const selection = Project.schema.path('category').enumValues;
-    Project.findByIdAndUpdate(req.params.id,
-      { $set: { category: selection[req.body.index] }},
-      { new: true, safe: true, upsert: true },
-      (err, response) => {
-        if (err) return handleErr(res, 500);
-        res.json(response);  
-      })
-  },
-
-  updateDescription: (req, res) => {
-    Project.findByIdAndUpdate(req.params.id,
-      { $set: { description: req.body.description }},
-      { new: true, upsert: true, safe: true },
-      (err, response) => {
-        if (err) return handleErr(res, 500);
-        res.json(response);
-      })
-  },
-
-  updateName: (req, res) => {
-    Project.findByIdAndUpdate(req.params.id,
-      { $set: { projectName: req.body.projectName }},
-      { new: true, safe: true, upsert: true },
-      (err, response) => {
-        if (err) return handleErr(res, 500);
-        res.json(response);
-      });
-  },
-
-  addContributor: (req, res) => {
-    Project.findByIdAndUpdate(req.params.id,
-      { $push: { contributors: req.body.contributor }},
-      { new: true, safe: true, upsert: true },
-      (err, response) => {
-        if (err) return handleErr(res, 500);
-        res.json(response);
-      });
-  },
-
-  removeContributor: (req, res) => {
-    const { index } = req.body;
-    Project.findByIdAndUpdate( req.params.id )
-      .then(data => {
-        data.contributors = data.contributors.filter(item => !index.includes(item.user));
-        data.save();
-        res.json(data);
-      })
-      .catch(err => res.status(400).send({ message: 'Could not find' }));
-  },
-
-  saveDraft: (req, res) => {
-    Project.findByIdAndUpdate(req.params.id, 
-      { $set: req.body.project },
-      { new: true, upsert: true, safe: true },
-      (err, project) => {
-        if (err) return handleErr(res, 503, 'Server error trying to update this project.');
-        res.json(project);
-      })
-  },
-
-  // Admin only controllers.
-  deleteProject: (req, res) => Project.findByIdAndRemove(req.params.id, (err, response) => err ? handleErr(res, 500) : res.json(response)),
 }

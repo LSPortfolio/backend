@@ -1,12 +1,4 @@
-const path = require('path');
-const rootPath = path.normalize(__dirname + '/../../');
-
 module.exports = {
-  db: process.env.DATABASE_CONNECTION,
+  db: process.env.DATABASE,
   port: process.env.PORT || 3030,
-  secret: process.env.SECRET,
-  token: process.env.TOKEN,
-  sendgridApi: process.env.SENDGRID_API_KEY,
-  airtableApi: process.env.AIRTABLE_API_KEY,
-  airtableBaseKey: process.env.AIRTABLE_BASE_KEY,
 }

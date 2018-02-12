@@ -1,7 +1,8 @@
 module.exports = app => {
-  const blankRoute = (req,res) => res.json({ test: `You have reached a route that has not been defined. Perhaps you typed something in wrong.` });
-
-  // TODO: Create route that goes to the users App
+  const blankRoute = (req, res) => res.json({ test: 'If you see this that the server is not working, but you have not specified a route'});
+  app.get('/helloThere', (req, res) => {
+    res.json(process.env.DATABASE);
+  });
 
   app.use('/user', require('../api/user'));
   app.use('/project', require('../api/projects'));
