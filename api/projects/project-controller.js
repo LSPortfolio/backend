@@ -71,8 +71,9 @@ module.exports = {
     //newProject.category = selection[categoryIndex];
     newProject.description = description;
     newProject.tags = tags;
-    newProject.createdBy = createdBy;
+    //newProject.createdBy = createdBy;
     newProject.github = github;
+    console.log(newProject);
     newProject.save((err, data) => {
       if (err) return handleErr(res, 403, 'There was an error creating a new project');
       res.send({ message: 'success', sent: data._id });

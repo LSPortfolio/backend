@@ -1,4 +1,4 @@
 module.exports = {
-  db: process.env.DATABASE,
+  db: 'mongodb://localhost/lsportfolios',
   port: process.env.PORT || 3030,
 }

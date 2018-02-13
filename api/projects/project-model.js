@@ -14,11 +14,10 @@ const commentSchema = new Schema({
 })
 
 const contributorSchema = new Schema({
-  name: String,
-  user: {
+  user: String,/*{
     type: Schema.Types.ObjectId,
     ref: 'User'
-  },
+  },*/
   role: String,
   responsibilities: String
 });
@@ -50,8 +49,8 @@ const projectSchema = new Schema({
     default: 0
   },
   createdBy: {
-    type: Schema.Types.ObjectId,
-    ref: 'User'
+    type: String/*Schema.Types.ObjectId,
+    ref: 'User'*/
   },
   live: {
     type: Boolean,
