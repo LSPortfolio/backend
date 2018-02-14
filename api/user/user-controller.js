@@ -1,17 +1,8 @@
 const User = require('./user-model');
 const bcrypt = require('bcrypt');
+const crypto = require('crypto-js');
 const jwt = require('jsonwebtoken');
-
-const format = (first, last) => {
-  String.prototype.capitalize = function() {
-    return this.charAt(0).toUpperCase() + this.slice(1);
-  }
-  return `${first.capitalize()} ${last.capitalize()}`;
-}
-
-const handleErr = (res, status, message, data) => {
-  return status === 500 ? res.status(500).send({ message: 'Server error with this operation.' }) : res.status(status).send({ message });
-}
+const { handleErr, format, isLoggedIn, sendEmail } = require('../util/index');
 
 module.exports = {
   createUser: (req, res) => {
@@ -43,7 +34,9 @@ module.exports = {
           id: newUser._id,
           permitted: newUser.role !== 'user' ? true : false,
         }
+        sendEmail.welcome(newUser.email);
         const token = jwt.sign(payload, process.env.SECRET);
+        user = newUser;
         res.status(200).json({ success: 'Registration successful!', token, user });
       });
     });
@@ -72,6 +65,35 @@ module.exports = {
       });
   },
 
+  forgotPassword: (req, res) => {           
+    const { email } = req.body;
+    User.findOne({ email }, (err, user) => {
+      if (err) return handleErr(res, 500, 'Server error, could not retrieve account details');
+      if (!user) return handleErr(res, 403, 'Could not find user with that email address');
+      const token = crypto.AES.encrypt('This is a token!', '29948fjwn3j');
+      if (!token) return handleErr(res, 500, 'Server error creating a reset token');
+      user.resetPasswordToken = token;
+      user.resetPasswordExpires = Date.now() + 3600000;
+      user.save();
+      sendEmail.forgotPassword(user.email, token);
+      res.status(200).send({ message: 'Success' });
+    });                            
+  },
+
+  resetPassword: (req, res) => {                                              //Reset Password after receiving the forgotten password email
+    const { token } = req.query;                          
+    const { password } = req.body;
+    User.findOne({ resetPasswordToken: token }, (err, data) => {
+      if (err || !data) res.status(400).send('Invalid username, so you are unable to change password');
+      bcrypt.hash(password, hash, (err, hashedPassword) => {
+        data.password = hashedPassword;
+        data.save();
+        sendEmail.pwResetSuccess(data.email)
+        res.status(200).res.json({ message: 'Success' });
+      });
+    });
+},
+
   find: (req, res) => {
     const { data } = req.body;
     User.findOne({ $or: [{ username: data }, { email: data }]}, (err, foundData) => {
@@ -80,4 +102,5 @@ module.exports = {
       res.status(200).json(foundData);
     })
   },
+
 }
