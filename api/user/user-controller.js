@@ -70,7 +70,8 @@ module.exports = {
     User.findOne({ email }, (err, user) => {
       if (err) return handleErr(res, 500, 'Server error, could not retrieve account details');
       if (!user) return handleErr(res, 403, 'Could not find user with that email address');
-      const token = crypto.AES.encrypt('This is a token!', '29948fjwn3j');
+      const random = ((Math.random() * 100) + 1).toString();
+      const token = crypto.MD5(random);
       if (!token) return handleErr(res, 500, 'Server error creating a reset token');
       user.resetPasswordToken = token;
       user.resetPasswordExpires = Date.now() + 3600000;
@@ -83,7 +84,7 @@ module.exports = {
   resetPassword: (req, res) => {
     const { token } = req.query;
     const { password } = req.body;
-    if (!password || !token) return handleErr(res, 403, 'Unauthorized'); 
+    if (!password || !req.query.token) return handleErr(res, 403, 'Unauthorized'); 
     User.findOne({ resetPasswordToken: token }, (err, data) => {
       if (err) return handleErr(res, 500, 'Server Error please try again later');
       if (!data) return handleErr(res, 403, 'Could not find user with that token');
