@@ -80,16 +80,18 @@ module.exports = {
     });                            
   },
 
-  resetPassword: (req, res) => {                                              //Reset Password after receiving the forgotten password email
-    const { token } = req.query;                          
+  resetPassword: (req, res) => {
+    const { token } = req.query;
     const { password } = req.body;
+    if (!password || !token) return handleErr(res, 403, 'Unauthorized'); 
     User.findOne({ resetPasswordToken: token }, (err, data) => {
-      if (err || !data) res.status(400).send('Invalid username, so you are unable to change password');
-      bcrypt.hash(password, hash, (err, hashedPassword) => {
+      if (err) return handleErr(res, 500, 'Server Error please try again later');
+      if (!data) return handleErr(res, 403, 'Could not find user with that token');
+      bcrypt.hash(password, 11, (err, hashedPassword) => {
         data.password = hashedPassword;
         data.save();
         sendEmail.pwResetSuccess(data.email)
-        res.status(200).res.json({ message: 'Success' });
+        res.status(200).json({ message: 'Success' });
       });
     });
 },
