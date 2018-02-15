@@ -5,7 +5,7 @@ module.exports = {
   },
   resetPassword: {
       subject: 'Change Password',
-      html: token => `Click https://lambdashowcase.herokuapp.com/resetPassword?token=${token} to reset your password...and input this code`
+      html: token => `Click <link href="https://lambdashowcase.herokuapp.com/resetPassword?token=${token}">here</link> to reset your password.`
   },
   pwResetSuccess: {
       subject: 'Lambda Showcase Password Change',

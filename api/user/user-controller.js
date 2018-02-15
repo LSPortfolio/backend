@@ -76,7 +76,7 @@ module.exports = {
       user.resetPasswordToken = token;
       user.resetPasswordExpires = Date.now() + 3600000;
       user.save();
-      sendEmail.forgotPassword(user.email, token);
+      //sendEmail.forgotPassword(user.email, token);
       res.status(200).send({ message: 'Success' });
     });                            
   },
@@ -89,6 +89,7 @@ module.exports = {
       if (err) return handleErr(res, 500, 'Server Error please try again later');
       if (!data) return handleErr(res, 403, 'Could not find user with that token');
       bcrypt.hash(password, 11, (err, hashedPassword) => {
+        data.resetPasswordToken = '';
         data.password = hashedPassword;
         data.save();
         sendEmail.pwResetSuccess(data.email)
